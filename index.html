@@ -975,6 +975,13 @@
             const [visibleCount, setVisibleCount] = useState(6);
 
             useEffect(() => {
+                // Evita que Chrome auto-enfoque el primer input
+                if (document.activeElement instanceof HTMLElement) {
+                    document.activeElement.blur();
+                }
+            }, []);
+
+            useEffect(() => {
                 if (selectedEvent || showFilters) {
                     document.body.style.overflow = 'hidden';
                 } else {
@@ -1116,6 +1123,11 @@
                                                 placeholder="Buscar eventos..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
+                                                autoComplete="off"
+                                                autoCorrect="off"
+                                                autoCapitalize="off"
+                                                spellCheck={false}
+                                                tabIndex={0}
                                                 className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
                                                 aria-label="Buscar eventos"
                                             />

@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eventos - Listado de Eventos</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .line-clamp-1 {
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 1;
+        }
+        
+        .line-clamp-2 {
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Toast styles */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        
+        .toast {
+            background: white;
+            border-radius: 8px;
+            padding: 16px 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            pointer-events: auto;
+            animation: slideIn 0.3s ease-out;
+            min-width: 300px;
+        }
+        
+        .toast.success {
+            border-left: 4px solid #10b981;
+        }
+        
+        .toast.info {
+            border-left: 4px solid #3b82f6;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            to {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+        }
+        
+        .toast.removing {
+            animation: slideOut 0.3s ease-in forwards;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="toast-container" class="toast-container"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Toast utility
+        const toast = {
+            show: (message, type = 'info') => {
+                const container = document.getElementById('toast-container');
+                const toastEl = document.createElement('div');
+                toastEl.className = `toast ${type}`;
+                toastEl.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <circle cx="10" cy="10" r="9" stroke="${type === 'success' ? '#10b981' : '#3b82f6'}" stroke-width="2"/>
+                        <path d="M6 10l3 3 5-6" stroke="${type === 'success' ? '#10b981' : '#3b82f6'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span style="color: #374151; font-size: 14px;">${message}</span>
+                `;
+                
+                container.appendChild(toastEl);
+                
+                setTimeout(() => {
+                    toastEl.classList.add('removing');
+                    setTimeout(() => toastEl.remove(), 300);
+                }, 2000);
+            },
+            success: (message) => toast.show(message, 'success'),
+            info: (message) => toast.show(message, 'info')
+        };
+
+        // Icon components
+        const SearchIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+        );
+
+        const MapPinIcon = ({ className = "w-6 h-6" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+        );
+
+        const BookmarkIcon = ({ filled, className = "w-5 h-5" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            </svg>
+        );
+
+        const CalendarIcon = ({ className = "w-4 h-4" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+        );
+
+        const ClockIcon = ({ className = "w-4 h-4" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+        );
+
+        const ListIcon = ({ className = "w-5 h-5" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+        );
+
+        const MapIcon = ({ className = "w-5 h-5" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+                <line x1="8" y1="2" x2="8" y2="18"></line>
+                <line x1="16" y1="6" x2="16" y2="22"></line>
+            </svg>
+        );
+
+        // Mock data
+        const mockEvents = [
+            {
+                id: '1',
+                title: 'Concierto de Rock en Vivo - The Electric Nights',
+                category: 'Concierto',
+                date: '15 Diciembre, 2025',
+                time: '20:00',
+                location: 'Estadio Nacional, Madrid',
+                image: 'https://images.unsplash.com/photo-1743791022256-40413c5f019b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb25jZXJ0JTIwbXVzaWMlMjBldmVudHxlbnwxfHx8fDE3NjU2Nzk3NDN8MA&ixlib=rb-4.1.0&q=80&w=400',
+                price: 45,
+                coordinates: { lat: 40.4168, lng: -3.7038 }
+            },
+            {
+                id: '2',
+                title: 'Obra de Teatro: "La vida es sueño"',
+                category: 'Teatro',
+                date: '14 Diciembre, 2025',
+                time: '19:30',
+                location: 'Teatro Real, Madrid',
+                image: 'https://images.unsplash.com/photo-1764936394584-c4a66ac31e00?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0aGVhdGVyJTIwcGVyZm9ybWFuY2UlMjBzdGFnZXxlbnwxfHx8fDE3NjU3MTY2NDd8MA&ixlib=rb-4.1.0&q=80&w=400',
+                price: 35,
+                coordinates: { lat: 40.4180, lng: -3.7100 }
+            },
+            {
+                id: '3',
+                title: 'Exposición de Arte Contemporáneo',
+                category: 'Arte',
+                date: '14 Diciembre, 2025',
+                time: '10:00',
+                location: 'Museo Reina Sofía, Madrid',
+                image: 'https://images.unsplash.com/photo-1719935115623-4857df23f3c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnQlMjBleGhpYml0aW9uJTIwZ2FsbGVyeXxlbnwxfHx8fDE3NjU3MTY2NDd8MA&ixlib=rb-4.1.0&q=80&w=400',
+                price: 0,
+                coordinates: { lat: 40.4085, lng: -3.6935 }
+            },
+            {
+                id: '4',
+                title: 'Festival Gastronómico Internacional',
+                category: 'Gastronomía',
+                date: '15 Diciembre, 2025',
+                time: '12:00',
+                location: 'Parque del Retiro, Madrid',
+                image: 'https://images.unsplash.com/photo-1675674683873-1232862e3c64?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb29kJTIwZmVzdGl2YWwlMjBtYXJrZXR8ZW58MXx8fHwxNzY1NjA5MzYyfDA&ixlib=rb-4.1.0&q=80&w=400',
+                price: 0,
+                coordinates: { lat: 40.4153, lng: -3.6844 }
+            },
+            {
+                id: '5',
+                title: 'Partido de Fútbol - Real Madrid vs Barcelona',
+                category: 'Deportes',
+                date: '15 Diciembre, 2025',
+                time: '21:00',
+                location: 'Santiago Bernabéu, Madrid',
+                image: 'https://images.unsplash.com/photo-1764050359179-517599dab87b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzcG9ydHMlMjBldmVudCUyMHN0YWRpdW18ZW58MXx8fHwxNzY1NzE0NDQzfDA&ixlib=rb-4.1.0&q=80&w=400',
+                price: 120,
+                coordinates: { lat: 40.4531, lng: -3.6883 }
+            },
+            {
+                id: '6',
+                title: 'Festival de Música Electrónica al Aire Libre',
+                category: 'Festival',
+                date: '14 Diciembre, 2025',
+                time: '18:00',
+                location: 'IFEMA, Madrid',
+                image: 'https://images.unsplash.com/photo-1605286232233-e448650f5914?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvdXRkb29yJTIwZmVzdGl2YWwlMjBjcm93ZHxlbnwxfHx8fDE3NjU3MTY2NDl8MA&ixlib=rb-4.1.0&q=80&w=400',
+                price: 55,
+                coordinates: { lat: 40.4625, lng: -3.6189 }
+            },
+        ];
+
+        // Components
+        function TopBar({ searchQuery, onSearchChange }) {
+            return (
+                <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+                    <div className="max-w-7xl mx-auto px-4 py-4">
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 shrink-0">
+                                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-2xl">
+                                    🎫
+                                </div>
+                                <span className="hidden sm:block font-semibold text-lg">Eventos</span>
+                            </div>
+
+                            <div className="flex-1 relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <SearchIcon />
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Concierto, Teatro..."
+                                    value={searchQuery}
+                                    onChange={(e) => onSearchChange(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                />
+                            </div>
+
+                            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                <MapPinIcon />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function FilterChips({ activeFilter, onFilterChange }) {
+            const filters = [
+                { id: 'today', label: 'Hoy' },
+                { id: 'weekend', label: 'Este fin de semana' },
+                { id: 'free', label: 'Gratis' },
+                { id: 'nearby', label: 'Cerca' },
+            ];
+
+            return (
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    {filters.map((filter) => (
+                        <button
+                            key={filter.id}
+                            onClick={() => onFilterChange(activeFilter === filter.id ? null : filter.id)}
+                            className={`px-4 py-2 rounded-full whitespace-nowrap transition-all ${
+                                activeFilter === filter.id
+                                    ? 'bg-purple-500 text-white shadow-md'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                        >
+                            {filter.label}
+                        </button>
+                    ))}
+                </div>
+            );
+        }
+
+        function EventCard({ event, isSaved, onSave, onViewDetail }) {
+            return (
+                <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+                    <div className="relative h-48 overflow-hidden">
+                        <img
+                            src={event.image}
+                            alt={event.title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                        />
+                        <div className="absolute top-3 right-3">
+                            <button
+                                onClick={() => onSave(event.id)}
+                                className={`p-2 rounded-full backdrop-blur-sm transition-all ${
+                                    isSaved
+                                        ? 'bg-purple-500 text-white'
+                                        : 'bg-white/80 text-gray-700 hover:bg-white'
+                                }`}
+                                aria-label="Guardar evento"
+                            >
+                                <BookmarkIcon filled={isSaved} />
+                            </button>
+                        </div>
+                        <div className="absolute bottom-3 left-3">
+                            <span className="px-3 py-1 bg-purple-500 text-white rounded-full text-sm">
+                                {event.category}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="p-4">
+                        <h3 className="font-semibold text-lg mb-3 line-clamp-2">{event.title}</h3>
+
+                        <div className="space-y-2 mb-4">
+                            <div className="flex items-center gap-2 text-gray-600">
+                                <CalendarIcon />
+                                <span className="text-sm">{event.date}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-600">
+                                <ClockIcon />
+                                <span className="text-sm">{event.time}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-600">
+                                <MapPinIcon className="w-4 h-4 shrink-0" />
+                                <span className="text-sm line-clamp-1">{event.location}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div>
+                                {event.price === 0 ? (
+                                    <span className="font-semibold text-green-600">Gratis</span>
+                                ) : (
+                                    <span className="font-semibold text-gray-900">${event.price}</span>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => onViewDetail(event.id)}
+                                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm font-medium"
+                            >
+                                Ver detalle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function MapView({ events, onEventClick }) {
+            return (
+                <div className="relative w-full h-[600px] bg-gray-200 rounded-xl overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-green-50 to-yellow-50">
+                        <div className="w-full h-full" style={{
+                            backgroundImage: `
+                                linear-gradient(to right, rgba(200,200,200,0.1) 1px, transparent 1px),
+                                linear-gradient(to bottom, rgba(200,200,200,0.1) 1px, transparent 1px)
+                            `,
+                            backgroundSize: '50px 50px'
+                        }} />
+                    </div>
+
+                    {events.map((event, index) => {
+                        const left = 15 + (index % 4) * 20;
+                        const top = 15 + Math.floor(index / 4) * 20;
+
+                        return (
+                            <button
+                                key={event.id}
+                                onClick={() => onEventClick(event.id)}
+                                className="absolute group"
+                                style={{ left: `${left}%`, top: `${top}%` }}
+                            >
+                                <div className="relative">
+                                    <MapPinIcon className="w-10 h-10 text-purple-500 fill-purple-500 drop-shadow-lg hover:scale-110 transition-transform" />
+                                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                        <div className="bg-white px-3 py-2 rounded-lg shadow-lg whitespace-nowrap text-sm">
+                                            {event.title}
+                                        </div>
+                                    </div>
+                                </div>
+                            </button>
+                        );
+                    })}
+
+                    <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+                        <button className="bg-white p-3 rounded-lg shadow-md hover:shadow-lg transition-shadow font-bold text-xl">
+                            +
+                        </button>
+                        <button className="bg-white p-3 rounded-lg shadow-md hover:shadow-lg transition-shadow font-bold text-xl">
+                            −
+                        </button>
+                    </div>
+
+                    <div className="absolute top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md">
+                        <p className="text-sm text-gray-600">{events.length} eventos mostrados</p>
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [searchQuery, setSearchQuery] = useState('');
+            const [activeFilter, setActiveFilter] = useState(null);
+            const [savedEvents, setSavedEvents] = useState(new Set());
+            const [viewMode, setViewMode] = useState('list');
+            const [displayedEvents, setDisplayedEvents] = useState([]);
+            const [visibleCount, setVisibleCount] = useState(6);
+
+            useEffect(() => {
+                let filtered = [...mockEvents];
+
+                if (searchQuery) {
+                    const query = searchQuery.toLowerCase();
+                    filtered = filtered.filter(
+                        event =>
+                            event.title.toLowerCase().includes(query) ||
+                            event.category.toLowerCase().includes(query) ||
+                            event.location.toLowerCase().includes(query)
+                    );
+                }
+
+                if (activeFilter === 'today') {
+                    filtered = filtered.filter(event => event.date.includes('14 Diciembre'));
+                } else if (activeFilter === 'weekend') {
+                    filtered = filtered.filter(event => 
+                        event.date.includes('14 Diciembre') || event.date.includes('15 Diciembre')
+                    );
+                } else if (activeFilter === 'free') {
+                    filtered = filtered.filter(event => event.price === 0);
+                } else if (activeFilter === 'nearby') {
+                    filtered = filtered.slice(0, 3);
+                }
+
+                setDisplayedEvents(filtered);
+            }, [searchQuery, activeFilter]);
+
+            useEffect(() => {
+                const handleScroll = () => {
+                    if (
+                        window.innerHeight + window.scrollY >= document.body.offsetHeight - 500 &&
+                        visibleCount < displayedEvents.length
+                    ) {
+                        setVisibleCount(prev => Math.min(prev + 3, displayedEvents.length));
+                    }
+                };
+
+                window.addEventListener('scroll', handleScroll);
+                return () => window.removeEventListener('scroll', handleScroll);
+            }, [visibleCount, displayedEvents.length]);
+
+            const handleSave = (eventId) => {
+                setSavedEvents(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(eventId)) {
+                        newSet.delete(eventId);
+                        toast.success('Evento eliminado de tu lista');
+                    } else {
+                        newSet.add(eventId);
+                        toast.success('Evento guardado en tu lista');
+                    }
+                    return newSet;
+                });
+            };
+
+            const handleViewDetail = (eventId) => {
+                const event = displayedEvents.find(e => e.id === eventId);
+                toast.info(`Abriendo detalles de: ${event?.title}`);
+            };
+
+            const visibleEvents = displayedEvents.slice(0, visibleCount);
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    <TopBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+
+                    <div className="max-w-7xl mx-auto px-4 py-6">
+                        <div className="flex items-center justify-between gap-4 mb-6">
+                            <div className="flex-1">
+                                <FilterChips
+                                    activeFilter={activeFilter}
+                                    onFilterChange={setActiveFilter}
+                                />
+                            </div>
+                            
+                            <div className="flex gap-2 shrink-0">
+                                <button
+                                    onClick={() => setViewMode('list')}
+                                    className={`p-2 rounded-lg transition-colors ${
+                                        viewMode === 'list'
+                                            ? 'bg-purple-500 text-white'
+                                            : 'bg-white text-gray-700 hover:bg-gray-100'
+                                    }`}
+                                    aria-label="Vista de lista"
+                                >
+                                    <ListIcon />
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('map')}
+                                    className={`p-2 rounded-lg transition-colors ${
+                                        viewMode === 'map'
+                                            ? 'bg-purple-500 text-white'
+                                            : 'bg-white text-gray-700 hover:bg-gray-100'
+                                    }`}
+                                    aria-label="Vista de mapa"
+                                >
+                                    <MapIcon />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <p className="text-gray-600">
+                                {displayedEvents.length} evento{displayedEvents.length !== 1 ? 's' : ''} encontrado{displayedEvents.length !== 1 ? 's' : ''}
+                            </p>
+                        </div>
+
+                        {viewMode === 'list' ? (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {visibleEvents.map(event => (
+                                        <EventCard
+                                            key={event.id}
+                                            event={event}
+                                            isSaved={savedEvents.has(event.id)}
+                                            onSave={handleSave}
+                                            onViewDetail={handleViewDetail}
+                                        />
+                                    ))}
+                                </div>
+
+                                {visibleCount < displayedEvents.length && (
+                                    <div className="text-center py-8">
+                                        <div className="inline-block w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                        <p className="mt-2 text-gray-600">Cargando más eventos...</p>
+                                    </div>
+                                )}
+
+                                {displayedEvents.length === 0 && (
+                                    <div className="text-center py-12">
+                                        <p className="text-gray-500 text-lg">No se encontraron eventos</p>
+                                        <button
+                                            onClick={() => {
+                                                setSearchQuery('');
+                                                setActiveFilter(null);
+                                            }}
+                                            className="mt-4 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                                        >
+                                            Limpiar filtros
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <MapView
+                                events={displayedEvents}
+                                onEventClick={handleViewDetail}
+                            />
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // Render app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

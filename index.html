@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eventos - Listado de Eventos</title>
+    <meta name="description" content="Aplicación de gestión de eventos culturales - Consulta, filtra y reserva eventos cerca de ti">
+    <title>EventosCultura - Gestión de Eventos Culturales</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,9 +16,6 @@
     <!-- Babel Standalone for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
     <style>
         * {
             margin: 0;
@@ -27,6 +25,27 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        /* Estilos para mejorar accesibilidad y usabilidad */
+        *:focus-visible {
+            outline: 3px solid #8b5cf6;
+            outline-offset: 2px;
+        }
+        
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: #8b5cf6;
+            color: white;
+            padding: 8px;
+            text-decoration: none;
+            z-index: 100;
+        }
+        
+        .skip-link:focus {
+            top: 0;
         }
         
         .scrollbar-hide::-webkit-scrollbar {
@@ -58,6 +77,21 @@
         
         .animate-spin {
             animation: spin 1s linear infinite;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .animate-slide-up {
+            animation: slideUp 0.3s ease-out;
         }
         
         /* Toast styles */
@@ -115,14 +149,36 @@
         .toast.removing {
             animation: slideOut 0.3s ease-in forwards;
         }
+        
+        /* Modal overlay */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.75);
+            z-index: 9998;
+            animation: fadeIn 0.2s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            position: relative;
+            z-index: 9999;
+        }
     </style>
 </head>
 <body>
+    <!-- Skip to main content link for accessibility -->
+    <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+    
     <div id="root"></div>
-    <div id="toast-container" class="toast-container"></div>
+    <div id="toast-container" class="toast-container" role="region" aria-live="polite" aria-label="Notificaciones"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         // Toast utility
         const toast = {
@@ -130,8 +186,10 @@
                 const container = document.getElementById('toast-container');
                 const toastEl = document.createElement('div');
                 toastEl.className = `toast ${type}`;
+                toastEl.setAttribute('role', 'status');
+                toastEl.setAttribute('aria-live', 'polite');
                 toastEl.innerHTML = `
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                         <circle cx="10" cy="10" r="9" stroke="${type === 'success' ? '#10b981' : '#3b82f6'}" stroke-width="2"/>
                         <path d="M6 10l3 3 5-6" stroke="${type === 'success' ? '#10b981' : '#3b82f6'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
@@ -143,35 +201,35 @@
                 setTimeout(() => {
                     toastEl.classList.add('removing');
                     setTimeout(() => toastEl.remove(), 300);
-                }, 2000);
+                }, 3000);
             },
             success: (message) => toast.show(message, 'success'),
             info: (message) => toast.show(message, 'info')
         };
 
-        // Icon components
-        const SearchIcon = () => (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        // Icon components with accessibility
+        const SearchIcon = ({ className = "w-5 h-5" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.35-4.35"></path>
             </svg>
         );
 
         const MapPinIcon = ({ className = "w-6 h-6" }) => (
-            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                 <circle cx="12" cy="10" r="3"></circle>
             </svg>
         );
 
         const BookmarkIcon = ({ filled, className = "w-5 h-5" }) => (
-            <svg className={className} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className={className} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
             </svg>
         );
 
         const CalendarIcon = ({ className = "w-4 h-4" }) => (
-            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="16" y1="2" x2="16" y2="6"></line>
                 <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -180,14 +238,14 @@
         );
 
         const ClockIcon = ({ className = "w-4 h-4" }) => (
-            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="10"></circle>
                 <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
         );
 
         const ListIcon = ({ className = "w-5 h-5" }) => (
-            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <line x1="8" y1="6" x2="21" y2="6"></line>
                 <line x1="8" y1="12" x2="21" y2="12"></line>
                 <line x1="8" y1="18" x2="21" y2="18"></line>
@@ -198,14 +256,57 @@
         );
 
         const MapIcon = ({ className = "w-5 h-5" }) => (
-            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
                 <line x1="8" y1="2" x2="8" y2="18"></line>
                 <line x1="16" y1="6" x2="16" y2="22"></line>
             </svg>
         );
 
-        // Mock data
+        const FilterIcon = ({ className = "w-5 h-5" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+            </svg>
+        );
+
+        const UserIcon = ({ className = "w-5 h-5" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+        );
+
+        const HomeIcon = ({ className = "w-5 h-5" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+        );
+
+        const ArrowLeftIcon = ({ className = "w-5 h-5" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+        );
+
+        const XIcon = ({ className = "w-5 h-5" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        );
+
+        const TicketIcon = ({ className = "w-5 h-5" }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
+                <path d="M13 5v2"></path>
+                <path d="M13 17v2"></path>
+                <path d="M13 11v2"></path>
+            </svg>
+        );
+
+        // Mock data with more details
         const mockEvents = [
             {
                 id: '1',
@@ -214,8 +315,12 @@
                 date: '15 Diciembre, 2025',
                 time: '20:00',
                 location: 'Estadio Nacional, Madrid',
+                address: 'Avenida de Concha Espina, 1, 28036 Madrid',
                 image: 'https://images.unsplash.com/photo-1743791022256-40413c5f019b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb25jZXJ0JTIwbXVzaWMlMjBldmVudHxlbnwxfHx8fDE3NjU2Nzk3NDN8MA&ixlib=rb-4.1.0&q=80&w=400',
                 price: 45,
+                availableTickets: 150,
+                description: 'Una noche inolvidable de rock con The Electric Nights. Disfruta de sus mayores éxitos y nuevas canciones en vivo.',
+                organizer: 'Live Nation España',
                 coordinates: { lat: 40.4168, lng: -3.7038 }
             },
             {
@@ -225,8 +330,12 @@
                 date: '14 Diciembre, 2025',
                 time: '19:30',
                 location: 'Teatro Real, Madrid',
+                address: 'Plaza de Isabel II, s/n, 28013 Madrid',
                 image: 'https://images.unsplash.com/photo-1764936394584-c4a66ac31e00?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0aGVhdGVyJTIwcGVyZm9ybWFuY2UlMjBzdGFnZXxlbnwxfHx8fDE3NjU3MTY2NDd8MA&ixlib=rb-4.1.0&q=80&w=400',
                 price: 35,
+                availableTickets: 80,
+                description: 'Clásico del teatro español de Calderón de la Barca. Una producción magistral con actores de renombre.',
+                organizer: 'Teatro Real',
                 coordinates: { lat: 40.4180, lng: -3.7100 }
             },
             {
@@ -236,8 +345,12 @@
                 date: '14 Diciembre, 2025',
                 time: '10:00',
                 location: 'Museo Reina Sofía, Madrid',
+                address: 'Calle de Santa Isabel, 52, 28012 Madrid',
                 image: 'https://images.unsplash.com/photo-1719935115623-4857df23f3c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnQlMjBleGhpYml0aW9uJTIwZ2FsbGVyeXxlbnwxfHx8fDE3NjU3MTY2NDd8MA&ixlib=rb-4.1.0&q=80&w=400',
                 price: 0,
+                availableTickets: 200,
+                description: 'Exposición gratuita de artistas contemporáneos emergentes. Entrada libre hasta completar aforo.',
+                organizer: 'Museo Reina Sofía',
                 coordinates: { lat: 40.4085, lng: -3.6935 }
             },
             {
@@ -247,8 +360,12 @@
                 date: '15 Diciembre, 2025',
                 time: '12:00',
                 location: 'Parque del Retiro, Madrid',
+                address: 'Plaza de la Independencia, 7, 28001 Madrid',
                 image: 'https://images.unsplash.com/photo-1675674683873-1232862e3c64?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb29kJTIwZmVzdGl2YWwlMjBtYXJrZXR8ZW58MXx8fHwxNzY1NjA5MzYyfDA&ixlib=rb-4.1.0&q=80&w=400',
                 price: 0,
+                availableTickets: 500,
+                description: 'Degustaciones de cocina internacional, talleres de cocina y showcooking con chefs reconocidos.',
+                organizer: 'Ayuntamiento de Madrid',
                 coordinates: { lat: 40.4153, lng: -3.6844 }
             },
             {
@@ -258,8 +375,12 @@
                 date: '15 Diciembre, 2025',
                 time: '21:00',
                 location: 'Santiago Bernabéu, Madrid',
+                address: 'Av. de Concha Espina, 1, 28036 Madrid',
                 image: 'https://images.unsplash.com/photo-1764050359179-517599dab87b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzcG9ydHMlMjBldmVudCUyMHN0YWRpdW18ZW58MXx8fHwxNzY1NzE0NDQzfDA&ixlib=rb-4.1.0&q=80&w=400',
                 price: 120,
+                availableTickets: 50,
+                description: 'El clásico del fútbol español. No te pierdas este emocionante partido entre los dos grandes del fútbol.',
+                organizer: 'Real Madrid CF',
                 coordinates: { lat: 40.4531, lng: -3.6883 }
             },
             {
@@ -269,117 +390,283 @@
                 date: '14 Diciembre, 2025',
                 time: '18:00',
                 location: 'IFEMA, Madrid',
+                address: 'Av. del Partenón, 5, 28042 Madrid',
                 image: 'https://images.unsplash.com/photo-1605286232233-e448650f5914?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvdXRkb29yJTIwZmVzdGl2YWwlMjBjcm93ZHxlbnwxfHx8fDE3NjU3MTY2NDl8MA&ixlib=rb-4.1.0&q=80&w=400',
                 price: 55,
+                availableTickets: 300,
+                description: 'Los mejores DJs internacionales en un festival de música electrónica inolvidable.',
+                organizer: 'Electric Dreams Festival',
                 coordinates: { lat: 40.4625, lng: -3.6189 }
             },
         ];
 
         // Components
-        function TopBar({ searchQuery, onSearchChange }) {
+
+        // Navigation Bar
+        function NavBar({ currentView, onNavigate, savedCount }) {
             return (
-                <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+                <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm" role="navigation" aria-label="Navegación principal">
                     <div className="max-w-7xl mx-auto px-4 py-4">
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 shrink-0">
-                                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-2xl">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-500 rounded-lg flex items-center justify-center text-2xl">
                                     🎫
                                 </div>
-                                <span className="hidden sm:block font-semibold text-lg">Eventos</span>
+                                <span className="hidden sm:block font-bold text-lg text-gray-900">EventosCultura</span>
                             </div>
 
-                            <div className="flex-1 relative">
-                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                    <SearchIcon />
-                                </div>
-                                <input
-                                    type="text"
-                                    placeholder="Concierto, Teatro..."
-                                    value={searchQuery}
-                                    onChange={(e) => onSearchChange(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => onNavigate('home')}
+                                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                                        currentView === 'home'
+                                            ? 'bg-purple-600 text-white'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                    aria-label="Ir a inicio"
+                                    aria-current={currentView === 'home' ? 'page' : undefined}
+                                >
+                                    <HomeIcon className="w-5 h-5" />
+                                    <span className="hidden sm:inline">Inicio</span>
+                                </button>
+                                <button
+                                    onClick={() => onNavigate('saved')}
+                                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 relative ${
+                                        currentView === 'saved'
+                                            ? 'bg-purple-600 text-white'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                    aria-label={`Mis eventos, ${savedCount} guardados`}
+                                    aria-current={currentView === 'saved' ? 'page' : undefined}
+                                >
+                                    <BookmarkIcon filled={currentView === 'saved'} />
+                                    <span className="hidden sm:inline">Mis Eventos</span>
+                                    {savedCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center" aria-label={`${savedCount} eventos guardados`}>
+                                            {savedCount}
+                                        </span>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => onNavigate('profile')}
+                                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                                        currentView === 'profile'
+                                            ? 'bg-purple-600 text-white'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                    aria-label="Ir a perfil"
+                                    aria-current={currentView === 'profile' ? 'page' : undefined}
+                                >
+                                    <UserIcon />
+                                    <span className="hidden sm:inline">Perfil</span>
+                                </button>
                             </div>
-
-                            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                <MapPinIcon />
-                            </button>
                         </div>
                     </div>
-                </div>
+                </nav>
             );
         }
 
-        function FilterChips({ activeFilter, onFilterChange }) {
-            const filters = [
+        // Search and Filter Component (Pantalla 2: Filtros/Búsqueda)
+        function SearchFilters({ searchQuery, onSearchChange, activeFilters, onFilterChange, onClose }) {
+            const categories = ['Concierto', 'Teatro', 'Arte', 'Gastronomía', 'Deportes', 'Festival'];
+            const dates = [
                 { id: 'today', label: 'Hoy' },
+                { id: 'tomorrow', label: 'Mañana' },
                 { id: 'weekend', label: 'Este fin de semana' },
+                { id: 'week', label: 'Esta semana' }
+            ];
+            const prices = [
                 { id: 'free', label: 'Gratis' },
-                { id: 'nearby', label: 'Cerca' },
+                { id: 'low', label: 'Hasta 30€' },
+                { id: 'medium', label: '30€ - 60��' },
+                { id: 'high', label: 'Más de 60€' }
             ];
 
             return (
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                    {filters.map((filter) => (
+                <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto animate-slide-up">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-2xl font-bold text-gray-900">Filtros y Búsqueda</h2>
+                        {onClose && (
+                            <button
+                                onClick={onClose}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                aria-label="Cerrar filtros"
+                            >
+                                <XIcon />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Búsqueda */}
+                    <div className="mb-6">
+                        <label htmlFor="search-input" className="block text-sm font-semibold text-gray-700 mb-2">
+                            Buscar eventos
+                        </label>
+                        <div className="relative">
+                            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                id="search-input"
+                                type="text"
+                                placeholder="Nombre, categoría o ubicación..."
+                                value={searchQuery}
+                                onChange={(e) => onSearchChange(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                                aria-describedby="search-help"
+                            />
+                        </div>
+                        <p id="search-help" className="text-sm text-gray-500 mt-1">
+                            Introduce palabras clave para buscar eventos
+                        </p>
+                    </div>
+
+                    {/* Categorías */}
+                    <div className="mb-6">
+                        <fieldset>
+                            <legend className="text-sm font-semibold text-gray-700 mb-2">Categoría</legend>
+                            <div className="flex flex-wrap gap-2">
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => onFilterChange('category', cat)}
+                                        className={`px-4 py-2 rounded-full text-sm transition-all ${
+                                            activeFilters.category === cat
+                                                ? 'bg-purple-600 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                        aria-pressed={activeFilters.category === cat}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    {/* Fecha */}
+                    <div className="mb-6">
+                        <fieldset>
+                            <legend className="text-sm font-semibold text-gray-700 mb-2">Fecha</legend>
+                            <div className="flex flex-wrap gap-2">
+                                {dates.map(date => (
+                                    <button
+                                        key={date.id}
+                                        onClick={() => onFilterChange('date', date.id)}
+                                        className={`px-4 py-2 rounded-full text-sm transition-all ${
+                                            activeFilters.date === date.id
+                                                ? 'bg-purple-600 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                        aria-pressed={activeFilters.date === date.id}
+                                    >
+                                        {date.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    {/* Precio */}
+                    <div className="mb-6">
+                        <fieldset>
+                            <legend className="text-sm font-semibold text-gray-700 mb-2">Precio</legend>
+                            <div className="flex flex-wrap gap-2">
+                                {prices.map(price => (
+                                    <button
+                                        key={price.id}
+                                        onClick={() => onFilterChange('price', price.id)}
+                                        className={`px-4 py-2 rounded-full text-sm transition-all ${
+                                            activeFilters.price === price.id
+                                                ? 'bg-purple-600 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                        aria-pressed={activeFilters.price === price.id}
+                                    >
+                                        {price.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    {/* Ubicación */}
+                    <div className="mb-6">
                         <button
-                            key={filter.id}
-                            onClick={() => onFilterChange(activeFilter === filter.id ? null : filter.id)}
-                            className={`px-4 py-2 rounded-full whitespace-nowrap transition-all ${
-                                activeFilter === filter.id
-                                    ? 'bg-purple-500 text-white shadow-md'
+                            onClick={() => onFilterChange('nearby', !activeFilters.nearby)}
+                            className={`w-full px-4 py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${
+                                activeFilters.nearby
+                                    ? 'bg-purple-600 text-white'
                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
+                            aria-pressed={activeFilters.nearby}
                         >
-                            {filter.label}
+                            <MapPinIcon className="w-5 h-5" />
+                            <span>Solo eventos cerca de mí</span>
                         </button>
-                    ))}
+                    </div>
+
+                    {/* Botón limpiar */}
+                    <button
+                        onClick={() => {
+                            onSearchChange('');
+                            onFilterChange('reset', null);
+                        }}
+                        className="w-full px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                    >
+                        Limpiar todos los filtros
+                    </button>
                 </div>
             );
         }
 
+        // Event Card Component
         function EventCard({ event, isSaved, onSave, onViewDetail }) {
             return (
-                <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+                <article className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden">
                     <div className="relative h-48 overflow-hidden">
                         <img
                             src={event.image}
-                            alt={event.title}
+                            alt={`Imagen del evento ${event.title}`}
                             className="w-full h-full object-cover"
                             loading="lazy"
                         />
                         <div className="absolute top-3 right-3">
                             <button
-                                onClick={() => onSave(event.id)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSave(event.id);
+                                }}
                                 className={`p-2 rounded-full backdrop-blur-sm transition-all ${
                                     isSaved
-                                        ? 'bg-purple-500 text-white'
+                                        ? 'bg-purple-600 text-white'
                                         : 'bg-white/80 text-gray-700 hover:bg-white'
                                 }`}
-                                aria-label="Guardar evento"
+                                aria-label={isSaved ? `Eliminar ${event.title} de guardados` : `Guardar ${event.title}`}
+                                aria-pressed={isSaved}
                             >
                                 <BookmarkIcon filled={isSaved} />
                             </button>
                         </div>
                         <div className="absolute bottom-3 left-3">
-                            <span className="px-3 py-1 bg-purple-500 text-white rounded-full text-sm">
+                            <span className="px-3 py-1 bg-purple-600 text-white rounded-full text-sm font-medium">
                                 {event.category}
                             </span>
                         </div>
                     </div>
 
                     <div className="p-4">
-                        <h3 className="font-semibold text-lg mb-3 line-clamp-2">{event.title}</h3>
+                        <h3 className="font-bold text-lg mb-3 line-clamp-2 text-gray-900">{event.title}</h3>
 
-                        <div className="space-y-2 mb-4">
-                            <div className="flex items-center gap-2 text-gray-600">
+                        <div className="space-y-2 mb-4 text-gray-600">
+                            <div className="flex items-center gap-2">
                                 <CalendarIcon />
                                 <span className="text-sm">{event.date}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-600">
+                            <div className="flex items-center gap-2">
                                 <ClockIcon />
                                 <span className="text-sm">{event.time}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-600">
+                            <div className="flex items-center gap-2">
                                 <MapPinIcon className="w-4 h-4 shrink-0" />
                                 <span className="text-sm line-clamp-1">{event.location}</span>
                             </div>
@@ -388,16 +675,276 @@
                         <div className="flex items-center justify-between">
                             <div>
                                 {event.price === 0 ? (
-                                    <span className="font-semibold text-green-600">Gratis</span>
+                                    <span className="font-bold text-green-600 text-lg">Gratis</span>
                                 ) : (
-                                    <span className="font-semibold text-gray-900">{event.price}€</span>
+                                    <span className="font-bold text-gray-900 text-lg">{event.price}€</span>
                                 )}
                             </div>
                             <button
                                 onClick={() => onViewDetail(event.id)}
-                                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm font-medium"
+                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                                aria-label={`Ver detalles de ${event.title}`}
                             >
                                 Ver detalle
+                            </button>
+                        </div>
+                    </div>
+                </article>
+            );
+        }
+
+        // Event Detail Component (Pantalla 3: Detalle del Evento)
+        function EventDetail({ event, isSaved, onSave, onClose, onReserve }) {
+            const [tickets, setTickets] = useState(1);
+
+            return (
+                <div className="fixed inset-0 z-50 overflow-y-auto" style={{ zIndex: 9998 }}>
+                    <div className="modal-overlay" onClick={onClose} aria-hidden="true"></div>
+                    
+                    <div className="flex min-h-full items-center justify-center p-4" style={{ position: 'relative', zIndex: 9999 }}>
+                        <article 
+                            className="relative bg-white rounded-xl shadow-2xl max-w-3xl w-full animate-slide-up modal-content"
+                            role="dialog"
+                            aria-labelledby="event-title"
+                            aria-modal="true"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header Image */}
+                            <div className="relative h-64 md:h-80 overflow-hidden rounded-t-xl">
+                                <img
+                                    src={event.image}
+                                    alt={`Imagen del evento ${event.title}`}
+                                    className="w-full h-full object-cover"
+                                />
+                                <button
+                                    onClick={onClose}
+                                    className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+                                    aria-label="Cerrar detalles del evento"
+                                >
+                                    <XIcon />
+                                </button>
+                                <div className="absolute bottom-4 left-4">
+                                    <span className="px-4 py-2 bg-purple-600 text-white rounded-full font-medium">
+                                        {event.category}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6 md:p-8">
+                                <div className="flex items-start justify-between mb-4">
+                                    <h2 id="event-title" className="text-2xl md:text-3xl font-bold text-gray-900 flex-1">
+                                        {event.title}
+                                    </h2>
+                                    <button
+                                        onClick={() => onSave(event.id)}
+                                        className={`ml-4 p-3 rounded-full transition-all ${
+                                            isSaved
+                                                ? 'bg-purple-600 text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                        aria-label={isSaved ? 'Eliminar de guardados' : 'Guardar evento'}
+                                        aria-pressed={isSaved}
+                                    >
+                                        <BookmarkIcon filled={isSaved} className="w-6 h-6" />
+                                    </button>
+                                </div>
+
+                                <p className="text-gray-600 mb-6 text-lg">{event.description}</p>
+
+                                {/* Event Info */}
+                                <div className="space-y-4 mb-6 bg-gray-50 p-4 rounded-lg">
+                                    <div className="flex items-center gap-3 text-gray-700">
+                                        <CalendarIcon className="w-5 h-5 text-purple-600" />
+                                        <div>
+                                            <span className="font-semibold">Fecha: </span>
+                                            <span>{event.date}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-gray-700">
+                                        <ClockIcon className="w-5 h-5 text-purple-600" />
+                                        <div>
+                                            <span className="font-semibold">Hora: </span>
+                                            <span>{event.time}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3 text-gray-700">
+                                        <MapPinIcon className="w-5 h-5 text-purple-600 shrink-0 mt-1" />
+                                        <div>
+                                            <div className="font-semibold">{event.location}</div>
+                                            <div className="text-sm text-gray-600">{event.address}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-gray-700">
+                                        <UserIcon className="w-5 h-5 text-purple-600" />
+                                        <div>
+                                            <span className="font-semibold">Organizador: </span>
+                                            <span>{event.organizer}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Precio y disponibilidad */}
+                                <div className="mb-6 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-gray-700 font-semibold">Precio por entrada:</span>
+                                        {event.price === 0 ? (
+                                            <span className="text-2xl font-bold text-green-600">Gratis</span>
+                                        ) : (
+                                            <span className="text-2xl font-bold text-gray-900">{event.price}€</span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-600">Entradas disponibles:</span>
+                                        <span className="font-semibold text-gray-900">{event.availableTickets}</span>
+                                    </div>
+                                </div>
+
+                                {/* Selector de entradas */}
+                                <div className="mb-6">
+                                    <label htmlFor="tickets-input" className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Número de entradas
+                                    </label>
+                                    <div className="flex items-center gap-4">
+                                        <button
+                                            onClick={() => setTickets(Math.max(1, tickets - 1))}
+                                            className="w-10 h-10 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold text-xl transition-colors"
+                                            aria-label="Reducir número de entradas"
+                                            disabled={tickets <= 1}
+                                        >
+                                            −
+                                        </button>
+                                        <input
+                                            id="tickets-input"
+                                            type="number"
+                                            min="1"
+                                            max={event.availableTickets}
+                                            value={tickets}
+                                            onChange={(e) => setTickets(Math.min(event.availableTickets, Math.max(1, parseInt(e.target.value) || 1)))}
+                                            className="w-20 text-center border-2 border-gray-300 rounded-lg py-2 font-semibold text-lg"
+                                            aria-label="Número de entradas"
+                                        />
+                                        <button
+                                            onClick={() => setTickets(Math.min(event.availableTickets, tickets + 1))}
+                                            className="w-10 h-10 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold text-xl transition-colors"
+                                            aria-label="Aumentar número de entradas"
+                                            disabled={tickets >= event.availableTickets}
+                                        >
+                                            +
+                                        </button>
+                                        {event.price > 0 && (
+                                            <div className="ml-auto">
+                                                <span className="text-gray-600 text-sm">Total: </span>
+                                                <span className="text-xl font-bold text-gray-900">{event.price * tickets}€</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Botones de acción */}
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={onClose}
+                                        className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                    >
+                                        Volver
+                                    </button>
+                                    <button
+                                        onClick={() => onReserve(event, tickets)}
+                                        className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center justify-center gap-2"
+                                        aria-label={`Reservar ${tickets} entrada${tickets > 1 ? 's' : ''}`}
+                                    >
+                                        <TicketIcon />
+                                        <span>Reservar {tickets > 1 ? `${tickets} entradas` : 'entrada'}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+            );
+        }
+
+        // Saved Events View (Pantalla 4: Lista Personal)
+        function SavedEventsView({ events, onViewDetail, onRemove }) {
+            if (events.length === 0) {
+                return (
+                    <div className="text-center py-16">
+                        <BookmarkIcon filled={false} className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">No tienes eventos guardados</h2>
+                        <p className="text-gray-600 mb-6">Explora eventos y guárdalos para verlos más tarde</p>
+                    </div>
+                );
+            }
+
+            return (
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Mis Eventos Guardados ({events.length})</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {events.map(event => (
+                            <EventCard
+                                key={event.id}
+                                event={event}
+                                isSaved={true}
+                                onSave={onRemove}
+                                onViewDetail={onViewDetail}
+                            />
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // Profile View (Pantalla 4 alternativa: Perfil de Usuario)
+        function ProfileView() {
+            return (
+                <div className="max-w-2xl mx-auto">
+                    <div className="bg-white rounded-xl shadow-md p-8">
+                        <div className="flex items-center gap-6 mb-8">
+                            <div className="w-24 h-24 bg-gradient-to-br from-purple-600 to-pink-500 rounded-full flex items-center justify-center text-white text-4xl">
+                                👤
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-1">Usuario Demo</h2>
+                                <p className="text-gray-600">usuario@ejemplo.com</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div>
+                                <h3 className="font-semibold text-gray-900 mb-3">Información Personal</h3>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between py-2 border-b border-gray-200">
+                                        <span className="text-gray-600">Nombre:</span>
+                                        <span className="font-medium text-gray-900">Usuario Demo</span>
+                                    </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-200">
+                                        <span className="text-gray-600">Email:</span>
+                                        <span className="font-medium text-gray-900">usuario@ejemplo.com</span>
+                                    </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-200">
+                                        <span className="text-gray-600">Ubicación:</span>
+                                        <span className="font-medium text-gray-900">Madrid, España</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="font-semibold text-gray-900 mb-3">Preferencias</h3>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between py-2 border-b border-gray-200">
+                                        <span className="text-gray-600">Categorías favoritas:</span>
+                                        <span className="font-medium text-gray-900">Conciertos, Teatro</span>
+                                    </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-200">
+                                        <span className="text-gray-600">Notificaciones:</span>
+                                        <span className="font-medium text-gray-900">Activadas</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                                Editar Perfil
                             </button>
                         </div>
                     </div>
@@ -405,97 +952,76 @@
             );
         }
 
-        function MapView({ events, onEventClick }) {
-            return (
-                <div className="relative w-full h-[600px] bg-gray-200 rounded-xl overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-green-50 to-yellow-50">
-                        <div className="w-full h-full" style={{
-                            backgroundImage: `
-                                linear-gradient(to right, rgba(200,200,200,0.1) 1px, transparent 1px),
-                                linear-gradient(to bottom, rgba(200,200,200,0.1) 1px, transparent 1px)
-                            `,
-                            backgroundSize: '50px 50px'
-                        }} />
-                    </div>
-
-                    {events.map((event, index) => {
-                        const left = 15 + (index % 4) * 20;
-                        const top = 15 + Math.floor(index / 4) * 20;
-
-                        return (
-                            <button
-                                key={event.id}
-                                onClick={() => onEventClick(event.id)}
-                                className="absolute group"
-                                style={{ left: `${left}%`, top: `${top}%` }}
-                            >
-                                <div className="relative">
-                                    <MapPinIcon className="w-10 h-10 text-purple-500 fill-purple-500 drop-shadow-lg hover:scale-110 transition-transform" />
-                                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                        <div className="bg-white px-3 py-2 rounded-lg shadow-lg whitespace-nowrap text-sm">
-                                            {event.title}
-                                        </div>
-                                    </div>
-                                </div>
-                            </button>
-                        );
-                    })}
-
-                    <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-                        <button className="bg-white p-3 rounded-lg shadow-md hover:shadow-lg transition-shadow font-bold text-xl">
-                            +
-                        </button>
-                        <button className="bg-white p-3 rounded-lg shadow-md hover:shadow-lg transition-shadow font-bold text-xl">
-                            −
-                        </button>
-                    </div>
-
-                    <div className="absolute top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md">
-                        <p className="text-sm text-gray-600">{events.length} eventos mostrados</p>
-                    </div>
-                </div>
-            );
-        }
-
+        // Main App Component
         function App() {
+            const [currentView, setCurrentView] = useState('home');
             const [searchQuery, setSearchQuery] = useState('');
-            const [activeFilter, setActiveFilter] = useState(null);
+            const [activeFilters, setActiveFilters] = useState({
+                category: null,
+                date: null,
+                price: null,
+                nearby: false
+            });
             const [savedEvents, setSavedEvents] = useState(new Set());
-            const [viewMode, setViewMode] = useState('list');
             const [displayedEvents, setDisplayedEvents] = useState([]);
+            const [selectedEvent, setSelectedEvent] = useState(null);
+            const [showFilters, setShowFilters] = useState(false);
             const [visibleCount, setVisibleCount] = useState(6);
 
+            // Filter logic
             useEffect(() => {
                 let filtered = [...mockEvents];
 
+                // Search filter
                 if (searchQuery) {
                     const query = searchQuery.toLowerCase();
                     filtered = filtered.filter(
                         event =>
                             event.title.toLowerCase().includes(query) ||
                             event.category.toLowerCase().includes(query) ||
-                            event.location.toLowerCase().includes(query)
+                            event.location.toLowerCase().includes(query) ||
+                            event.description.toLowerCase().includes(query)
                     );
                 }
 
-                if (activeFilter === 'today') {
+                // Category filter
+                if (activeFilters.category) {
+                    filtered = filtered.filter(event => event.category === activeFilters.category);
+                }
+
+                // Date filter
+                if (activeFilters.date === 'today') {
                     filtered = filtered.filter(event => event.date.includes('14 Diciembre'));
-                } else if (activeFilter === 'weekend') {
+                } else if (activeFilters.date === 'weekend') {
                     filtered = filtered.filter(event => 
                         event.date.includes('14 Diciembre') || event.date.includes('15 Diciembre')
                     );
-                } else if (activeFilter === 'free') {
+                }
+
+                // Price filter
+                if (activeFilters.price === 'free') {
                     filtered = filtered.filter(event => event.price === 0);
-                } else if (activeFilter === 'nearby') {
+                } else if (activeFilters.price === 'low') {
+                    filtered = filtered.filter(event => event.price > 0 && event.price <= 30);
+                } else if (activeFilters.price === 'medium') {
+                    filtered = filtered.filter(event => event.price > 30 && event.price <= 60);
+                } else if (activeFilters.price === 'high') {
+                    filtered = filtered.filter(event => event.price > 60);
+                }
+
+                // Nearby filter
+                if (activeFilters.nearby) {
                     filtered = filtered.slice(0, 3);
                 }
 
                 setDisplayedEvents(filtered);
-            }, [searchQuery, activeFilter]);
+            }, [searchQuery, activeFilters]);
 
+            // Lazy loading
             useEffect(() => {
                 const handleScroll = () => {
                     if (
+                        currentView === 'home' &&
                         window.innerHeight + window.scrollY >= document.body.offsetHeight - 500 &&
                         visibleCount < displayedEvents.length
                     ) {
@@ -505,7 +1031,7 @@
 
                 window.addEventListener('scroll', handleScroll);
                 return () => window.removeEventListener('scroll', handleScroll);
-            }, [visibleCount, displayedEvents.length]);
+            }, [visibleCount, displayedEvents.length, currentView]);
 
             const handleSave = (eventId) => {
                 setSavedEvents(prev => {
@@ -522,100 +1048,164 @@
             };
 
             const handleViewDetail = (eventId) => {
-                const event = displayedEvents.find(e => e.id === eventId);
-                toast.info(`Abriendo detalles de: ${event?.title}`);
+                const event = mockEvents.find(e => e.id === eventId);
+                setSelectedEvent(event);
             };
 
+            const handleFilterChange = (type, value) => {
+                if (type === 'reset') {
+                    setActiveFilters({
+                        category: null,
+                        date: null,
+                        price: null,
+                        nearby: false
+                    });
+                } else if (type === 'nearby') {
+                    setActiveFilters(prev => ({ ...prev, nearby: value }));
+                } else {
+                    setActiveFilters(prev => ({
+                        ...prev,
+                        [type]: prev[type] === value ? null : value
+                    }));
+                }
+            };
+
+            const handleReserve = (event, tickets) => {
+                toast.success(`¡Reserva confirmada! ${tickets} entrada${tickets > 1 ? 's' : ''} para ${event.title}`);
+                setSelectedEvent(null);
+                handleSave(event.id);
+            };
+
+            const savedEventsList = mockEvents.filter(e => savedEvents.has(e.id));
             const visibleEvents = displayedEvents.slice(0, visibleCount);
+            const activeFilterCount = Object.values(activeFilters).filter(v => v).length;
 
             return (
                 <div className="min-h-screen bg-gray-50">
-                    <TopBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+                    <NavBar 
+                        currentView={currentView} 
+                        onNavigate={setCurrentView}
+                        savedCount={savedEvents.size}
+                    />
 
-                    <div className="max-w-7xl mx-auto px-4 py-6">
-                        <div className="flex items-center justify-between gap-4 mb-6">
-                            <div className="flex-1">
-                                <FilterChips
-                                    activeFilter={activeFilter}
-                                    onFilterChange={setActiveFilter}
-                                />
-                            </div>
-                            
-                            <div className="flex gap-2 shrink-0">
-                                <button
-                                    onClick={() => setViewMode('list')}
-                                    className={`p-2 rounded-lg transition-colors ${
-                                        viewMode === 'list'
-                                            ? 'bg-purple-500 text-white'
-                                            : 'bg-white text-gray-700 hover:bg-gray-100'
-                                    }`}
-                                    aria-label="Vista de lista"
-                                >
-                                    <ListIcon />
-                                </button>
-                                <button
-                                    onClick={() => setViewMode('map')}
-                                    className={`p-2 rounded-lg transition-colors ${
-                                        viewMode === 'map'
-                                            ? 'bg-purple-500 text-white'
-                                            : 'bg-white text-gray-700 hover:bg-gray-100'
-                                    }`}
-                                    aria-label="Vista de mapa"
-                                >
-                                    <MapIcon />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="mb-4">
-                            <p className="text-gray-600">
-                                {displayedEvents.length} evento{displayedEvents.length !== 1 ? 's' : ''} encontrado{displayedEvents.length !== 1 ? 's' : ''}
-                            </p>
-                        </div>
-
-                        {viewMode === 'list' ? (
+                    <main id="main-content" className="max-w-7xl mx-auto px-4 py-6">
+                        {/* Home View - Pantalla 1: Listado de Eventos */}
+                        {currentView === 'home' && (
                             <>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {visibleEvents.map(event => (
-                                        <EventCard
-                                            key={event.id}
-                                            event={event}
-                                            isSaved={savedEvents.has(event.id)}
-                                            onSave={handleSave}
-                                            onViewDetail={handleViewDetail}
-                                        />
-                                    ))}
+                                {/* Search and Quick Actions */}
+                                <div className="mb-6">
+                                    <div className="flex gap-4 items-center">
+                                        <div className="flex-1 relative">
+                                            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                placeholder="Buscar eventos..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                                                aria-label="Buscar eventos"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => setShowFilters(!showFilters)}
+                                            className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 font-medium relative"
+                                            aria-label={`${showFilters ? 'Ocultar' : 'Mostrar'} filtros avanzados`}
+                                            aria-expanded={showFilters}
+                                        >
+                                            <FilterIcon />
+                                            <span className="hidden sm:inline">Filtros</span>
+                                            {activeFilterCount > 0 && (
+                                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
+                                                    {activeFilterCount}
+                                                </span>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
 
-                                {visibleCount < displayedEvents.length && (
-                                    <div className="text-center py-8">
-                                        <div className="inline-block w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                                        <p className="mt-2 text-gray-600">Cargando más eventos...</p>
+                                {/* Advanced Filters Panel */}
+                                {showFilters && (
+                                    <div className="mb-6">
+                                        <SearchFilters
+                                            searchQuery={searchQuery}
+                                            onSearchChange={setSearchQuery}
+                                            activeFilters={activeFilters}
+                                            onFilterChange={handleFilterChange}
+                                            onClose={() => setShowFilters(false)}
+                                        />
                                     </div>
                                 )}
 
-                                {displayedEvents.length === 0 && (
+                                {/* Results count */}
+                                <div className="mb-4">
+                                    <p className="text-gray-600" role="status" aria-live="polite">
+                                        {displayedEvents.length} evento{displayedEvents.length !== 1 ? 's' : ''} encontrado{displayedEvents.length !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+
+                                {/* Events Grid */}
+                                {displayedEvents.length > 0 ? (
+                                    <>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {visibleEvents.map(event => (
+                                                <EventCard
+                                                    key={event.id}
+                                                    event={event}
+                                                    isSaved={savedEvents.has(event.id)}
+                                                    onSave={handleSave}
+                                                    onViewDetail={handleViewDetail}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        {/* Loading indicator */}
+                                        {visibleCount < displayedEvents.length && (
+                                            <div className="text-center py-8" role="status" aria-live="polite">
+                                                <div className="inline-block w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
+                                                <p className="mt-2 text-gray-600">Cargando más eventos...</p>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
                                     <div className="text-center py-12">
-                                        <p className="text-gray-500 text-lg">No se encontraron eventos</p>
+                                        <p className="text-gray-500 text-lg mb-4">No se encontraron eventos</p>
                                         <button
                                             onClick={() => {
                                                 setSearchQuery('');
-                                                setActiveFilter(null);
+                                                handleFilterChange('reset', null);
                                             }}
-                                            className="mt-4 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                                            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
                                         >
                                             Limpiar filtros
                                         </button>
                                     </div>
                                 )}
                             </>
-                        ) : (
-                            <MapView
-                                events={displayedEvents}
-                                onEventClick={handleViewDetail}
+                        )}
+
+                        {/* Saved Events View */}
+                        {currentView === 'saved' && (
+                            <SavedEventsView
+                                events={savedEventsList}
+                                onViewDetail={handleViewDetail}
+                                onRemove={handleSave}
                             />
                         )}
-                    </div>
+
+                        {/* Profile View */}
+                        {currentView === 'profile' && <ProfileView />}
+                    </main>
+
+                    {/* Event Detail Modal */}
+                    {selectedEvent && (
+                        <EventDetail
+                            event={selectedEvent}
+                            isSaved={savedEvents.has(selectedEvent.id)}
+                            onSave={handleSave}
+                            onClose={() => setSelectedEvent(null)}
+                            onReserve={handleReserve}
+                        />
+                    )}
                 </div>
             );
         }

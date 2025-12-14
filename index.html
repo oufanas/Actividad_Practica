@@ -155,7 +155,7 @@
             position: fixed;
             inset: 0;
             background-color: rgba(0, 0, 0, 0.75);
-            z-index: 9998;
+            z-index: 40;
             animation: fadeIn 0.2s ease-out;
         }
         
@@ -479,12 +479,12 @@
             const prices = [
                 { id: 'free', label: 'Gratis' },
                 { id: 'low', label: 'Hasta 30€' },
-                { id: 'medium', label: '30€ - 60��' },
+                { id: 'medium', label: '30€ - 60  ' },
                 { id: 'high', label: 'Más de 60€' }
             ];
 
             return (
-                <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto animate-slide-up">
+                <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto animate-slide-up relative z-40">
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-2xl font-bold text-gray-900">Filtros y Búsqueda</h2>
                         {onClose && (
@@ -698,7 +698,7 @@
             const [tickets, setTickets] = useState(1);
 
             return (
-                <div className="fixed inset-0 z-50 overflow-y-auto" style={{ zIndex: 9998 }}>
+                <div className="fixed inset-0 z-50 overflow-y-auto">
                     <div className="modal-overlay" onClick={onClose} aria-hidden="true"></div>
                     
                     <div className="flex min-h-full items-center justify-center p-4" style={{ position: 'relative', zIndex: 9999 }}>

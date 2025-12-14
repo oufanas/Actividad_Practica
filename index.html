@@ -28,7 +28,11 @@
         }
         
         /* Estilos para mejorar accesibilidad y usabilidad */
-        *:focus-visible {
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible,
+        select:focus-visible {
             outline: 3px solid #8b5cf6;
             outline-offset: 2px;
         }
@@ -172,7 +176,9 @@
 </head>
 <body>
     <!-- Skip to main content link for accessibility -->
-    <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+    <a href="#main-content" class="skip-link" tabindex="-1">
+        Saltar al contenido principal
+    </a>
     
     <div id="root"></div>
     <div id="toast-container" class="toast-container" role="region" aria-live="polite" aria-label="Notificaciones"></div>
@@ -967,6 +973,14 @@
             const [selectedEvent, setSelectedEvent] = useState(null);
             const [showFilters, setShowFilters] = useState(false);
             const [visibleCount, setVisibleCount] = useState(6);
+
+            useEffect(() => {
+                if (selectedEvent || showFilters) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                }
+            }, [selectedEvent, showFilters]);
 
             // Filter logic
             useEffect(() => {

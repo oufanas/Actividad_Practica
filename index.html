@@ -1132,20 +1132,18 @@
                                                 aria-label="Buscar eventos"
                                             />
                                         </div>
-                                        <button
-                                            onClick={() => setShowFilters(!showFilters)}
-                                            className="px-12 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 font-medium relative"
-                                            aria-label={`${showFilters ? 'Ocultar' : 'Mostrar'} filtros avanzados`}
-                                            aria-expanded={showFilters}
-                                        >
-                                            <FilterIcon />
-                                            <span className="hidden sm:inline">Filtros</span>
-                                            {activeFilterCount > 0 && (
-                                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
-                                                    {activeFilterCount}
-                                                </span>
-                                            )}
-                                        </button>
+<button
+    onClick={() => setShowFilters(!showFilters)}
+    className="min-w-[160px] px-6 py-3 bg-purple-600 text-white rounded-lg
+               hover:bg-purple-700 transition-colors
+               flex items-center justify-center gap-2 font-medium"
+    aria-label={`${showFilters ? 'Ocultar' : 'Mostrar'} filtros de búsqueda`}
+    aria-expanded={showFilters}
+>
+    <SearchIcon className="w-5 h-5" />
+    <FilterIcon className="w-5 h-5" />
+    <span>Filtros</span>
+</button>
                                     </div>
                                 </div>
 
